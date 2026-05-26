@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
+import Cookies from "js-cookie";
 
 import {
   collection,
@@ -14,23 +17,28 @@ import {
 import { db } from "@/lib/firebase";
 
 export default function AdminPage() {
+  const router = useRouter();
+
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
+
   const [category, setCategory] =
     useState("Zupy");
 
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] =
+    useState<any[]>([]);
 
   useEffect(() => {
     const unsub = onSnapshot(
       collection(db, "menu"),
       (snapshot) => {
-        const data = snapshot.docs.map(
-          (docu) => ({
-            id: docu.id,
-            ...docu.data(),
-          })
-        );
+        const data =
+          snapshot.docs.map(
+            (docu) => ({
+              id: docu.id,
+              ...docu.data(),
+            })
+          );
 
         setItems(data);
       }
@@ -53,29 +61,57 @@ export default function AdminPage() {
     setPrice("");
   };
 
-  const toggleAvailable = async (
-    id: string,
-    current: boolean
+  const toggleAvailable =
+    async (
+      id: string,
+      current: boolean
+    ) => {
+      const refDoc = doc(
+        db,
+        "menu",
+        id
+      );
+
+      await updateDoc(refDoc, {
+        available: !current,
+      });
+    };
+
+  const removeItem = async (
+    id: string
   ) => {
-    const ref = doc(db, "menu", id);
+    const refDoc = doc(
+      db,
+      "menu",
+      id
+    );
 
-    await updateDoc(ref, {
-      available: !current,
-    });
-  };
-
-  const removeItem = async (id: string) => {
-    const ref = doc(db, "menu", id);
-
-    await deleteDoc(ref);
+    await deleteDoc(refDoc);
   };
 
   return (
     <div className="min-h-screen bg-black text-white p-10">
 
-      <h1 className="text-5xl font-bold mb-10">
-        Panel Admina
-      </h1>
+      <div className="flex items-center justify-between mb-10">
+
+        <h1 className="text-5xl font-bold">
+          Panel Admina
+        </h1>
+
+        <button
+          onClick={() => {
+            Cookies.remove(
+              "authenticated"
+            );
+
+            router.push("/login");
+          }}
+          className="bg-red-600 px-5 py-3 rounded-xl font-bold"
+        >
+          Wyloguj
+        </button>
+
+      </div>
 
       <div className="bg-zinc-900 p-8 rounded-3xl shadow-2xl max-w-xl space-y-5 border border-zinc-800 mb-10">
 
@@ -86,7 +122,7 @@ export default function AdminPage() {
           onChange={(e) =>
             setName(e.target.value)
           }
-          className="w-full bg-zinc-800 border border-zinc-700 p-4 rounded-xl text-white placeholder:text-zinc-400 outline-none"
+          className="w-full bg-zinc-800 border border-zinc-700 p-4 rounded-xl text-white outline-none"
         />
 
         <input
@@ -96,7 +132,7 @@ export default function AdminPage() {
           onChange={(e) =>
             setPrice(e.target.value)
           }
-          className="w-full bg-zinc-800 border border-zinc-700 p-4 rounded-xl text-white placeholder:text-zinc-400 outline-none"
+          className="w-full bg-zinc-800 border border-zinc-700 p-4 rounded-xl text-white outline-none"
         />
 
         <select
@@ -115,7 +151,7 @@ export default function AdminPage() {
 
         <button
           onClick={addItem}
-          className="bg-white text-black px-6 py-4 rounded-xl w-full font-bold hover:scale-[1.02] transition"
+          className="bg-white text-black px-6 py-4 rounded-xl w-full font-bold"
         >
           Dodaj danie
         </button>
@@ -123,6 +159,7 @@ export default function AdminPage() {
       </div>
 
       <div className="space-y-4">
+
         {items.map((item: any) => (
           <div
             key={item.id}
@@ -130,6 +167,7 @@ export default function AdminPage() {
           >
 
             <div>
+
               <h2
                 className={`text-2xl font-bold ${
                   !item.available
@@ -147,6 +185,7 @@ export default function AdminPage() {
               <p className="text-yellow-400 mt-1">
                 {item.category}
               </p>
+
             </div>
 
             <div className="flex gap-3">
@@ -178,6 +217,7 @@ export default function AdminPage() {
 
           </div>
         ))}
+
       </div>
 
     </div>
