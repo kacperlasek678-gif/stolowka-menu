@@ -17,10 +17,14 @@ import {
 import { db } from "@/lib/firebase";
 
 export default function AdminPage() {
+
   const router = useRouter();
 
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
+  const [name, setName] =
+    useState("");
+
+  const [price, setPrice] =
+    useState("");
 
   const [category, setCategory] =
     useState("Zupy");
@@ -29,9 +33,11 @@ export default function AdminPage() {
     useState<any[]>([]);
 
   useEffect(() => {
+
     const unsub = onSnapshot(
       collection(db, "menu"),
       (snapshot) => {
+
         const data =
           snapshot.docs.map(
             (docu) => ({
@@ -41,24 +47,98 @@ export default function AdminPage() {
           );
 
         setItems(data);
+
       }
     );
 
     return () => unsub();
+
   }, []);
 
-  const addItem = async () => {
-    if (!name || !price) return;
+  useEffect(() => {
 
-    await addDoc(collection(db, "menu"), {
-      name,
-      price: Number(price),
-      available: true,
-      category,
-    });
+    let timeout: NodeJS.Timeout;
+
+    const logout = () => {
+
+      Cookies.remove(
+        "authenticated"
+      );
+
+      router.push("/login");
+
+    };
+
+    const resetTimer = () => {
+
+      clearTimeout(timeout);
+
+      timeout = setTimeout(() => {
+
+        logout();
+
+      }, 30 * 60 * 1000);
+
+    };
+
+    window.addEventListener(
+      "mousemove",
+      resetTimer
+    );
+
+    window.addEventListener(
+      "keydown",
+      resetTimer
+    );
+
+    window.addEventListener(
+      "click",
+      resetTimer
+    );
+
+    resetTimer();
+
+    return () => {
+
+      clearTimeout(timeout);
+
+      window.removeEventListener(
+        "mousemove",
+        resetTimer
+      );
+
+      window.removeEventListener(
+        "keydown",
+        resetTimer
+      );
+
+      window.removeEventListener(
+        "click",
+        resetTimer
+      );
+
+    };
+
+  }, [router]);
+
+  const addItem = async () => {
+
+    if (!name || !price)
+      return;
+
+    await addDoc(
+      collection(db, "menu"),
+      {
+        name,
+        price: Number(price),
+        available: true,
+        category,
+      }
+    );
 
     setName("");
     setPrice("");
+
   };
 
   const toggleAvailable =
@@ -66,6 +146,7 @@ export default function AdminPage() {
       id: string,
       current: boolean
     ) => {
+
       const refDoc = doc(
         db,
         "menu",
@@ -75,19 +156,21 @@ export default function AdminPage() {
       await updateDoc(refDoc, {
         available: !current,
       });
+
     };
 
-  const removeItem = async (
-    id: string
-  ) => {
-    const refDoc = doc(
-      db,
-      "menu",
-      id
-    );
+  const removeItem =
+    async (id: string) => {
 
-    await deleteDoc(refDoc);
-  };
+      const refDoc = doc(
+        db,
+        "menu",
+        id
+      );
+
+      await deleteDoc(refDoc);
+
+    };
 
   return (
     <div className="min-h-screen bg-black text-white p-10">
@@ -100,11 +183,13 @@ export default function AdminPage() {
 
         <button
           onClick={() => {
+
             Cookies.remove(
               "authenticated"
             );
 
             router.push("/login");
+
           }}
           className="bg-red-600 px-5 py-3 rounded-xl font-bold"
         >
@@ -120,7 +205,9 @@ export default function AdminPage() {
           placeholder="Nazwa dania"
           value={name}
           onChange={(e) =>
-            setName(e.target.value)
+            setName(
+              e.target.value
+            )
           }
           className="w-full bg-zinc-800 border border-zinc-700 p-4 rounded-xl text-white outline-none"
         />
@@ -130,7 +217,9 @@ export default function AdminPage() {
           placeholder="Cena"
           value={price}
           onChange={(e) =>
-            setPrice(e.target.value)
+            setPrice(
+              e.target.value
+            )
           }
           className="w-full bg-zinc-800 border border-zinc-700 p-4 rounded-xl text-white outline-none"
         />
@@ -138,7 +227,9 @@ export default function AdminPage() {
         <select
           value={category}
           onChange={(e) =>
-            setCategory(e.target.value)
+            setCategory(
+              e.target.value
+            )
           }
           className="w-full bg-zinc-800 border border-zinc-700 p-4 rounded-xl text-white outline-none"
         >
@@ -160,63 +251,69 @@ export default function AdminPage() {
 
       <div className="space-y-4">
 
-        {items.map((item: any) => (
-          <div
-            key={item.id}
-            className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex items-center justify-between"
-          >
+        {items.map(
+          (item: any) => (
 
-            <div>
+            <div
+              key={item.id}
+              className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex items-center justify-between"
+            >
 
-              <h2
-                className={`text-2xl font-bold ${
-                  !item.available
-                    ? "line-through opacity-40"
-                    : ""
-                }`}
-              >
-                {item.name}
-              </h2>
+              <div>
 
-              <p className="text-zinc-400 text-lg">
-                {item.price} zł
-              </p>
+                <h2
+                  className={`text-2xl font-bold ${
+                    !item.available
+                      ? "line-through opacity-40"
+                      : ""
+                  }`}
+                >
+                  {item.name}
+                </h2>
 
-              <p className="text-yellow-400 mt-1">
-                {item.category}
-              </p>
+                <p className="text-zinc-400 text-lg">
+                  {item.price} zł
+                </p>
+
+                <p className="text-yellow-400 mt-1">
+                  {item.category}
+                </p>
+
+              </div>
+
+              <div className="flex gap-3">
+
+                <button
+                  onClick={() =>
+                    toggleAvailable(
+                      item.id,
+                      item.available
+                    )
+                  }
+                  className="bg-yellow-500 text-black px-4 py-2 rounded-xl font-bold"
+                >
+                  {item.available
+                    ? "Wyprzedane"
+                    : "Przywróć"}
+                </button>
+
+                <button
+                  onClick={() =>
+                    removeItem(
+                      item.id
+                    )
+                  }
+                  className="bg-red-600 px-4 py-2 rounded-xl font-bold"
+                >
+                  Usuń
+                </button>
+
+              </div>
 
             </div>
 
-            <div className="flex gap-3">
-
-              <button
-                onClick={() =>
-                  toggleAvailable(
-                    item.id,
-                    item.available
-                  )
-                }
-                className="bg-yellow-500 text-black px-4 py-2 rounded-xl font-bold"
-              >
-                {item.available
-                  ? "Wyprzedane"
-                  : "Przywróć"}
-              </button>
-
-              <button
-                onClick={() =>
-                  removeItem(item.id)
-                }
-                className="bg-red-600 px-4 py-2 rounded-xl font-bold"
-              >
-                Usuń
-              </button>
-
-            </div>
-
-          </div>
-        ))}
+          )
+        )}
 
       </div>
 
