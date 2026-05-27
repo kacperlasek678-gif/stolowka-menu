@@ -45,6 +45,54 @@ export default function MenuPage() {
 
   useEffect(() => {
 
+    const goFullscreen =
+      async () => {
+
+        const elem =
+          document.documentElement;
+
+        if (
+          !document.fullscreenElement
+        ) {
+
+          try {
+
+            await elem.requestFullscreen();
+
+          } catch (err) {
+
+            console.log(err);
+
+          }
+
+        }
+
+      };
+
+    const handleClick = () => {
+
+      goFullscreen();
+
+    };
+
+    window.addEventListener(
+      "click",
+      handleClick
+    );
+
+    return () => {
+
+      window.removeEventListener(
+        "click",
+        handleClick
+      );
+
+    };
+
+  }, []);
+
+  useEffect(() => {
+
     const interval =
       setInterval(() => {
 
@@ -69,7 +117,7 @@ export default function MenuPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] text-white overflow-hidden select-none">
+    <div className="min-h-screen bg-[#0f0f0f] text-white overflow-hidden select-none cursor-none">
 
       <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_top,rgba(255,215,0,0.25),transparent_40%)]"></div>
 
