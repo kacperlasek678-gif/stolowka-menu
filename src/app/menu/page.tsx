@@ -13,6 +13,7 @@ import {
 import { db } from "@/lib/firebase";
 
 export default function MenuPage() {
+
   const [items, setItems] =
     useState<any[]>([]);
 
@@ -20,9 +21,11 @@ export default function MenuPage() {
     useState("");
 
   useEffect(() => {
+
     const unsub = onSnapshot(
       collection(db, "menu"),
       (snapshot) => {
+
         const data =
           snapshot.docs.map(
             (doc) => ({
@@ -32,16 +35,21 @@ export default function MenuPage() {
           );
 
         setItems(data);
+
       }
     );
 
     return () => unsub();
+
   }, []);
 
   useEffect(() => {
+
     const interval =
       setInterval(() => {
-        const now = new Date();
+
+        const now =
+          new Date();
 
         setTime(
           now.toLocaleTimeString(
@@ -52,14 +60,62 @@ export default function MenuPage() {
             }
           )
         );
+
       }, 1000);
 
     return () =>
       clearInterval(interval);
+
+  }, []);
+
+  useEffect(() => {
+
+    const goFullscreen =
+      async () => {
+
+        const elem =
+          document.documentElement;
+
+        if (
+          !document.fullscreenElement
+        ) {
+
+          try {
+
+            await elem.requestFullscreen();
+
+          } catch (err) {
+
+            console.log(err);
+
+          }
+
+        }
+
+      };
+
+    const handleClick = () => {
+      goFullscreen();
+    };
+
+    window.addEventListener(
+      "click",
+      handleClick
+    );
+
+    return () => {
+
+      window.removeEventListener(
+        "click",
+        handleClick
+      );
+
+    };
+
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-zinc-900 to-black text-white p-12 overflow-hidden cursor-none">
+    <div className="min-h-screen bg-gradient-to-br from-black via-zinc-900 to-black text-white p-12 overflow-hidden cursor-none select-none">
 
       <div className="max-w-7xl mx-auto">
 
@@ -108,8 +164,9 @@ export default function MenuPage() {
 
           if (
             filtered.length === 0
-          )
+          ) {
             return null;
+          }
 
           return (
             <div
@@ -125,6 +182,7 @@ export default function MenuPage() {
 
                 {filtered.map(
                   (item: any) => (
+
                     <div
                       key={item.id}
                       className={`rounded-3xl border p-8 flex justify-between items-center transition-all duration-500 ${
@@ -165,6 +223,7 @@ export default function MenuPage() {
                       </div>
 
                     </div>
+
                   )
                 )}
 
@@ -172,6 +231,7 @@ export default function MenuPage() {
 
             </div>
           );
+
         })}
 
       </div>
