@@ -127,30 +127,30 @@ export default function MenuPage() {
 
       <div className="relative z-10 px-16 py-10">
 
-        <div className="flex justify-between items-start mb-14 bg-white/40 backdrop-blur-xl rounded-[40px] border border-yellow-300 shadow-2xl px-12 py-10">
+        <div className="flex justify-between items-center mb-10 bg-white/40 backdrop-blur-xl rounded-[40px] border border-yellow-300 shadow-2xl px-10 py-6">
 
-          <div className="flex items-center gap-14">
+          <div className="flex items-center gap-10">
 
             <Image
               src="/logo.png"
               alt="Jak u Mamy"
-              width={840}
-              height={840}
+              width={260}
+              height={260}
               className="drop-shadow-2xl"
               priority
             />
 
             <div>
 
-              <p className="uppercase tracking-[0.4em] text-yellow-800 font-bold text-lg mb-4">
+              <p className="uppercase tracking-[0.4em] text-yellow-800 font-bold text-lg mb-3">
                 Stołówka
               </p>
 
-              <h1 className="text-8xl font-black leading-none text-yellow-950">
+              <h1 className="text-7xl font-black leading-none text-yellow-950">
                 Jak u Mamy
               </h1>
 
-              <p className="text-2xl text-yellow-900 mt-5 font-medium">
+              <p className="text-xl text-yellow-900 mt-4 font-medium">
                 Domowe obiady • Świeże składniki • Ustka
               </p>
 
@@ -160,15 +160,15 @@ export default function MenuPage() {
 
           <div className="text-right">
 
-            <p className="uppercase tracking-[0.3em] text-yellow-800 font-bold text-lg mb-4">
+            <p className="uppercase tracking-[0.3em] text-yellow-800 font-bold text-lg mb-3">
               Aktualna godzina
             </p>
 
-            <div className="text-7xl font-black text-yellow-950">
+            <div className="text-6xl font-black text-yellow-950">
               {time}
             </div>
 
-            <p className="text-yellow-900 text-2xl mt-4 font-semibold animate-pulse">
+            <p className="text-yellow-900 text-xl mt-3 font-semibold animate-pulse">
               Smacznego 🍽️
             </p>
 
@@ -201,14 +201,14 @@ export default function MenuPage() {
 
             <div
               key={category}
-              className="mb-14"
+              className="mb-12"
             >
 
-              <div className="flex items-center gap-5 mb-7">
+              <div className="flex items-center gap-5 mb-6">
 
                 <div className="h-[3px] w-20 bg-yellow-700 rounded-full"></div>
 
-                <h2 className="text-5xl font-black uppercase tracking-wide text-yellow-900">
+                <h2 className="text-4xl font-black uppercase tracking-wide text-yellow-900">
                   {category}
                 </h2>
 
@@ -221,7 +221,7 @@ export default function MenuPage() {
 
                     <div
                       key={item.id}
-                      className={`rounded-[35px] border px-10 py-8 flex justify-between items-center transition-all duration-500 shadow-2xl backdrop-blur-xl ${
+                      className={`rounded-[35px] border px-10 py-7 flex justify-between items-center transition-all duration-500 shadow-2xl backdrop-blur-xl ${
                         item.available
                           ? "bg-white/50 border-yellow-300"
                           : "bg-red-200/60 border-red-500 opacity-70"
@@ -231,7 +231,7 @@ export default function MenuPage() {
                       <div>
 
                         <h3
-                          className={`text-5xl font-black ${
+                          className={`text-4xl font-black ${
                             !item.available
                               ? "line-through"
                               : ""
@@ -249,7 +249,7 @@ export default function MenuPage() {
                       </div>
 
                       <div
-                        className={`text-6xl font-black ${
+                        className={`text-5xl font-black ${
                           item.available
                             ? "text-yellow-800"
                             : "text-red-700"
