@@ -134,8 +134,8 @@ export default function MenuPage() {
             <Image
               src="/logo.png"
               alt="Jak u Mamy"
-              width={420}
-              height={420}
+              width={840}
+              height={840}
               className="drop-shadow-2xl"
               priority
             />
