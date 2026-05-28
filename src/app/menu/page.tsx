@@ -129,13 +129,13 @@ export default function MenuPage() {
 
         <div className="flex justify-between items-start mb-14 bg-white/40 backdrop-blur-xl rounded-[40px] border border-yellow-300 shadow-2xl px-12 py-10">
 
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-14">
 
             <Image
               src="/logo.png"
               alt="Jak u Mamy"
-              width={180}
-              height={180}
+              width={420}
+              height={420}
               className="drop-shadow-2xl"
               priority
             />
