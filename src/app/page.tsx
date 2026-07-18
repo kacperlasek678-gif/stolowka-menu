@@ -1,65 +1,143 @@
-import Image from "next/image";
+import Link from "next/link";
+import {
+  UtensilsCrossed,
+  PencilLine,
+  Truck,
+  Car,
+  ArrowRight,
+} from "lucide-react";
 
-export default function Home() {
+const kafelki = [
+  {
+    title: "Menu",
+    description:
+      "Wyświetl aktualne menu stołówki Jak u Mamy.",
+    href: "/menu",
+    icon: UtensilsCrossed,
+    label: "Wyświetl menu",
+  },
+  {
+    title: "Edycja menu",
+    description:
+      "Zarządzaj daniami, zdjęciami i aktualnym menu.",
+    href: "/admin",
+    icon: PencilLine,
+    label: "Zarządzaj menu",
+  },
+  {
+    title: "Dostawy",
+    description:
+      "Zarządzaj abonamentowiczami, kierowcami i planowaniem tras.",
+    href: "/dostawy",
+    icon: Truck,
+    label: "Zarządzaj dostawami",
+  },
+  {
+    title: "Panel kierowcy",
+    description:
+      "Sprawdź swoją trasę, adresy dostaw i status realizacji.",
+    href: "/kierowca",
+    icon: Car,
+    label: "Otwórz panel",
+  },
+];
+
+export default function HomePage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="min-h-screen bg-gray-950">
+      {/* TŁO */}
+
+      <div className="relative min-h-screen overflow-hidden">
+        {/* DEKORACYJNE TŁO */}
+
+        <div className="absolute -left-40 -top-40 h-96 w-96 rounded-full bg-yellow-400/10 blur-3xl" />
+
+        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-yellow-400/10 blur-3xl" />
+
+        {/* ZAWARTOŚĆ */}
+
+        <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col justify-center px-5 py-12 sm:px-8 lg:px-10">
+          {/* NAGŁÓWEK */}
+
+          <div className="mb-10 text-center">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-yellow-400 shadow-lg shadow-yellow-400/20">
+              <UtensilsCrossed
+                size={32}
+                className="text-gray-950"
+              />
+            </div>
+
+            <p className="text-sm font-bold uppercase tracking-[0.25em] text-yellow-400">
+              Stołówka szkolna
+            </p>
+
+            <h1 className="mt-3 text-4xl font-black tracking-tight text-white sm:text-5xl">
+              Jak u Mamy
+            </h1>
+
+            <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-gray-400 sm:text-lg">
+              Wybierz dział, do którego chcesz przejść.
+            </p>
+          </div>
+
+          {/* KAFELKI */}
+
+          <div className="mx-auto grid w-full max-w-5xl gap-5 md:grid-cols-2">
+            {kafelki.map((kafelek) => {
+              const Icon = kafelek.icon;
+
+              return (
+                <Link
+                  key={kafelek.href}
+                  href={kafelek.href}
+                  className="group relative overflow-hidden rounded-3xl border border-gray-800 bg-gray-900 p-6 transition duration-300 hover:-translate-y-1 hover:border-yellow-400/50 hover:shadow-2xl hover:shadow-yellow-400/10 sm:p-8"
+                >
+                  {/* DELIKATNY EFEKT */}
+
+                  <div className="absolute right-0 top-0 h-32 w-32 translate-x-12 -translate-y-12 rounded-full bg-yellow-400/5 transition duration-300 group-hover:bg-yellow-400/10" />
+
+                  <div className="relative">
+                    {/* IKONA */}
+
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-yellow-400 text-gray-950 transition duration-300 group-hover:scale-110">
+                      <Icon size={27} />
+                    </div>
+
+                    {/* TYTUŁ */}
+
+                    <h2 className="mt-6 text-2xl font-bold text-white">
+                      {kafelek.title}
+                    </h2>
+
+                    {/* OPIS */}
+
+                    <p className="mt-2 min-h-12 text-sm leading-relaxed text-gray-400 sm:text-base">
+                      {kafelek.description}
+                    </p>
+
+                    {/* LINK */}
+
+                    <div className="mt-6 flex items-center gap-2 font-bold text-yellow-400">
+                      <span>{kafelek.label}</span>
+
+                      <ArrowRight
+                        size={19}
+                        className="transition-transform duration-300 group-hover:translate-x-1"
+                      />
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* STOPKA */}
+
+          <p className="mt-10 text-center text-sm text-gray-600">
+            Jak u Mamy • System zarządzania
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }
