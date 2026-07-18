@@ -7,6 +7,7 @@ import {
   doc,
   onSnapshot,
   setDoc,
+  updateDoc,
 } from "firebase/firestore";
 
 import {
@@ -194,6 +195,9 @@ export default function PlanowaniePage() {
   const [zapisywanie, setZapisywanie] =
     useState(false);
 
+  const [bladPobierania, setBladPobierania] =
+    useState("");
+
   const [
     przeciaganyKlientId,
     setPrzeciaganyKlientId,
@@ -245,6 +249,10 @@ export default function PlanowaniePage() {
         console.error(
           "Błąd klientów:",
           error
+        );
+
+        setBladPobierania(
+          "Nie udało się pobrać abonamentowiczów. Odśwież stronę i zaloguj się ponownie."
         );
 
         setLadowanie(false);
@@ -383,13 +391,39 @@ export default function PlanowaniePage() {
     ]);
 
   /* =======================================================
+     TRASY AKTYWNYCH KIEROWCÓW
+
+     Stare trasy pozostawione po usuniętych lub wyłączonych
+     kierowcach nie mogą ukrywać klientów w planowaniu.
+  ======================================================= */
+
+  const trasyAktywnychKierowcow =
+    useMemo(() => {
+      const aktywneId = new Set(
+        aktywniKierowcy.map(
+          (kierowca) => kierowca.id
+        )
+      );
+
+      return trasyDnia.filter(
+        (trasa) =>
+          aktywneId.has(
+            trasa.kierowcaId
+          )
+      );
+    }, [
+      trasyDnia,
+      aktywniKierowcy,
+    ]);
+
+  /* =======================================================
      SPRAWDZENIE CZY KLIENT JEST W TRASIE
   ======================================================= */
 
   function znajdzTraseKlienta(
     klientId: string
   ) {
-    return trasyDnia.find(
+    return trasyAktywnychKierowcow.find(
       (trasa) =>
         trasa.kolejnosc?.includes(
           klientId
@@ -450,7 +484,13 @@ export default function PlanowaniePage() {
   }
 
   /* =======================================================
-     NIEPRZYPISANI
+     ZASOBNIK ABONAMENTÓW
+
+     Klient trafia tu, gdy nie znajduje się na dziennej
+     trasie. Domyślne przypisanie zachowujemy tylko dopóki
+     dla tego kierowcy nie została jeszcze utworzona trasa
+     na wybrany dzień. Dzięki temu usunięcie z trasy nie
+     ukrywa klienta — można go od razu przywrócić.
   ======================================================= */
 
   const nieprzypisani =
@@ -458,7 +498,7 @@ export default function PlanowaniePage() {
       return klienciNaDzien.filter(
         (klient) => {
           const jestWTrasie =
-            trasyDnia.some(
+            trasyAktywnychKierowcow.some(
               (trasa) =>
                 trasa.kolejnosc?.includes(
                   klient.id
@@ -469,29 +509,30 @@ export default function PlanowaniePage() {
             return false;
           }
 
-          /*
-           * Klient posiadający
-           * domyślnego kierowcę
-           * nie jest nieprzypisany.
-           */
+          const maAktywnegoDomyslnegoKierowce =
+            Boolean(
+              klient.kierowcaId &&
+              aktywniKierowcy.some(
+                (kierowca) =>
+                  kierowca.id ===
+                  klient.kierowcaId
+              )
+            );
 
-          if (
-            klient.kierowcaId &&
-            aktywniKierowcy.some(
-              (kierowca) =>
-                kierowca.id ===
-                klient.kierowcaId
-            )
-          ) {
-            return false;
+          if (!maAktywnegoDomyslnegoKierowce) {
+            return true;
           }
 
-          return true;
+          return trasyAktywnychKierowcow.some(
+            (trasa) =>
+              trasa.kierowcaId ===
+              klient.kierowcaId
+          );
         }
       );
     }, [
       klienciNaDzien,
-      trasyDnia,
+      trasyAktywnychKierowcow,
       aktywniKierowcy,
     ]);
 
@@ -525,6 +566,23 @@ export default function PlanowaniePage() {
       },
       {
         merge: true,
+      }
+    );
+  }
+
+  async function zapiszKierowceKlienta(
+    klientId: string,
+    kierowcaId: string
+  ) {
+    await updateDoc(
+      doc(
+        db,
+        "abonamentowicze",
+        klientId
+      ),
+      {
+        kierowcaId,
+        zmieniono: new Date(),
       }
     );
   }
@@ -595,10 +653,16 @@ export default function PlanowaniePage() {
         klientId
       );
 
-      await zapiszTrase(
-        kierowcaId,
-        obecnaKolejnosc
-      );
+      await Promise.all([
+        zapiszTrase(
+          kierowcaId,
+          obecnaKolejnosc
+        ),
+        zapiszKierowceKlienta(
+          klientId,
+          kierowcaId
+        ),
+      ]);
     } catch (error) {
       console.error(
         "Błąd przypisania:",
@@ -954,6 +1018,11 @@ export default function PlanowaniePage() {
           docelowyKierowcaId,
           listaDocelowa
         ),
+
+        zapiszKierowceKlienta(
+          klientId,
+          docelowyKierowcaId
+        ),
       ]);
     } catch (error) {
       console.error(
@@ -1003,6 +1072,17 @@ export default function PlanowaniePage() {
 
         </div>
 
+      </main>
+    );
+  }
+
+  if (bladPobierania) {
+    return (
+      <main className="mx-auto max-w-2xl p-5 sm:p-8">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-800">
+          <h1 className="text-xl font-black">Nie udało się załadować planowania</h1>
+          <p className="mt-2">{bladPobierania}</p>
+        </div>
       </main>
     );
   }
@@ -1122,7 +1202,7 @@ export default function PlanowaniePage() {
             </p>
 
             <p className="text-sm text-orange-600">
-              Nieprzypisanych
+              W zasobniku
             </p>
 
           </div>
@@ -1148,16 +1228,23 @@ export default function PlanowaniePage() {
 
         </div>
 
-        {/* NIEPRZYPISANI */}
+        {/* ZASOBNIK ABONAMENTÓW */}
 
-        {nieprzypisani.length >
-          0 && (
-          <section className="mb-8 rounded-2xl border border-orange-200 bg-orange-50 p-5">
+        <section className="mb-8 rounded-2xl border border-orange-200 bg-orange-50 p-5">
 
             <h2 className="font-bold text-orange-800">
-              ⚠️ Nieprzypisane dostawy
+              📦 Zasobnik abonamentów
             </h2>
 
+            <p className="mt-1 text-sm text-orange-700">
+              Usunięte z trasy lub nieprzypisane abonamenty. Wybierz kierowcę, aby przywrócić je do planu.
+            </p>
+
+            {nieprzypisani.length === 0 ? (
+              <p className="mt-4 rounded-xl border border-dashed border-orange-300 bg-white/70 p-4 text-sm font-medium text-orange-700">
+                Zasobnik jest pusty.
+              </p>
+            ) : (
             <div className="mt-4 space-y-3">
 
               {nieprzypisani.map(
@@ -1212,7 +1299,7 @@ export default function PlanowaniePage() {
                     >
 
                       <option value="">
-                        Wybierz kierowcę
+                        Przywróć do kierowcy
                       </option>
 
                       {aktywniKierowcy.map(
@@ -1241,9 +1328,9 @@ export default function PlanowaniePage() {
               )}
 
             </div>
+            )}
 
-          </section>
-        )}
+        </section>
 
         {/* DRAG & DROP */}
 

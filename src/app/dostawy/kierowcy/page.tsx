@@ -1,18 +1,11 @@
 "use client";
 
 import {
+  FormEvent,
+  useCallback,
   useEffect,
   useState,
 } from "react";
-
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  updateDoc,
-} from "firebase/firestore";
 
 import {
   Car,
@@ -28,20 +21,16 @@ import {
 } from "lucide-react";
 
 import {
-  db,
-} from "@/lib/firebase";
+  createDriver,
+  deleteDriver,
+  getDrivers,
+  updateDriver,
+} from "@/lib/api/kierowcy";
+import type { Kierowca } from "@/types/kierowca";
 
 /* =========================================================
    TYPY
 ========================================================= */
-
-type Kierowca = {
-  id: string;
-  imie: string;
-  telefon?: string;
-  aktywny: boolean;
-  pinUstawiony?: boolean;
-};
 
 /* =========================================================
    GŁÓWNY KOMPONENT
@@ -116,64 +105,22 @@ export default function KierowcyPage() {
      POBIERANIE KIEROWCÓW
   ======================================================= */
 
-  useEffect(() => {
-    const unsubscribe =
-      onSnapshot(
-        collection(
-          db,
-          "kierowcy"
-        ),
-
-        (snapshot) => {
-          const dane =
-            snapshot.docs.map(
-              (dokument) => ({
-                id:
-                  dokument.id,
-
-                ...dokument.data(),
-              })
-            ) as Kierowca[];
-
-          dane.sort(
-            (a, b) =>
-              (
-                a.imie ||
-                ""
-              ).localeCompare(
-                b.imie ||
-                  ""
-              )
-          );
-
-          setKierowcy(
-            dane
-          );
-
-          setLadowanie(
-            false
-          );
-        },
-
-        (error) => {
-          console.error(
-            "Błąd pobierania kierowców:",
-            error
-          );
-
-          setBlad(
-            "Nie udało się pobrać kierowców."
-          );
-
-          setLadowanie(
-            false
-          );
-        }
-      );
-
-    return () =>
-      unsubscribe();
+  const pobierzKierowcow = useCallback(async () => {
+    try {
+      setLadowanie(true);
+      const dane = await getDrivers();
+      setKierowcy(dane.kierowcy);
+    } catch (error) {
+      console.error("Błąd pobierania kierowców:", error);
+      setBlad("Nie udało się pobrać kierowców.");
+    } finally {
+      setLadowanie(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void Promise.resolve().then(pobierzKierowcow);
+  }, [pobierzKierowcow]);
 
   /* =======================================================
      RESET FORMULARZA
@@ -234,8 +181,7 @@ export default function KierowcyPage() {
   ======================================================= */
 
   async function zapiszKierowce(
-    event:
-      React.FormEvent<HTMLFormElement>
+    event: FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
 
@@ -303,22 +249,11 @@ export default function KierowcyPage() {
       if (
         edytowanyId
       ) {
-        await updateDoc(
-          doc(
-            db,
-            "kierowcy",
-            edytowanyId
-          ),
-          {
-            imie:
-              czysteImie,
-
-            telefon:
-              czystyTelefon,
-
-            aktywny,
-          }
-        );
+        await updateDriver(edytowanyId, {
+          imie: czysteImie,
+          telefon: czystyTelefon,
+          aktywny,
+        });
 
         /*
          * PIN zmieniamy tylko wtedy,
@@ -346,28 +281,11 @@ export default function KierowcyPage() {
       =================================================== */
 
       else {
-        const dokument =
-          await addDoc(
-            collection(
-              db,
-              "kierowcy"
-            ),
-            {
-              imie:
-                czysteImie,
-
-              telefon:
-                czystyTelefon,
-
-              aktywny,
-
-              pinUstawiony:
-                false,
-
-              utworzono:
-                new Date(),
-            }
-          );
+        const dokument = await createDriver({
+          imie: czysteImie,
+          telefon: czystyTelefon,
+          aktywny,
+        });
 
         /*
          * Po utworzeniu kierowcy
@@ -376,7 +294,7 @@ export default function KierowcyPage() {
 
         try {
           await ustawPin(
-            dokument.id,
+            dokument.kierowca.id,
             czystyPin
           );
         } catch (
@@ -399,6 +317,7 @@ export default function KierowcyPage() {
           );
 
           resetujFormularz();
+          await pobierzKierowcow();
 
           return;
         }
@@ -409,6 +328,7 @@ export default function KierowcyPage() {
       }
 
       resetujFormularz();
+      await pobierzKierowcow();
     } catch (error) {
       console.error(
         "Błąd zapisywania kierowcy:",
@@ -488,13 +408,7 @@ export default function KierowcyPage() {
     }
 
     try {
-      await deleteDoc(
-        doc(
-          db,
-          "kierowcy",
-          kierowca.id
-        )
-      );
+      await deleteDriver(kierowca.id);
 
       if (
         edytowanyId ===
@@ -506,6 +420,8 @@ export default function KierowcyPage() {
       setKomunikat(
         "Kierowca został usunięty."
       );
+
+      await pobierzKierowcow();
     } catch (error) {
       console.error(
         "Błąd usuwania kierowcy:",

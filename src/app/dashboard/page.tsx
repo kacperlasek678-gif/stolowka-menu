@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   collection,
@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 import { db } from "@/lib/firebase";
+import AdminGuard from "@/components/auth/AdminGuard";
 import StatCard from "@/components/ui/StatCard";
 
 type Status = "oczekuje" | "wTrasie" | "dostarczono";
@@ -118,6 +119,14 @@ const quickActions = [
 ];
 
 export default function DashboardPage() {
+  return (
+    <AdminGuard>
+      <DashboardContent />
+    </AdminGuard>
+  );
+}
+
+function DashboardContent() {
   const [klienci, setKlienci] =
     useState<Abonamentowicz[]>([]);
 
@@ -274,9 +283,9 @@ export default function DashboardPage() {
    * POBIERANIE STATUSU KLIENTA
    */
 
-  function pobierzStatus(
+  const pobierzStatus = useCallback((
     klientId: string
-  ): Status {
+  ): Status => {
     const znaleziony =
       dzisiejszeStatusy.find(
         (status) =>
@@ -287,7 +296,7 @@ export default function DashboardPage() {
       znaleziony?.status ||
       "oczekuje"
     );
-  }
+  }, [dzisiejszeStatusy]);
 
   /*
    * DZISIEJSZE DOSTAWY
@@ -305,7 +314,7 @@ export default function DashboardPage() {
       );
     }, [
       dzisiejsiKlienci,
-      dzisiejszeStatusy,
+      pobierzStatus,
     ]);
 
   /*

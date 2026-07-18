@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Jak u Mamy — stołówka i dostawy
 
-## Getting Started
+Aplikacja Next.js do publicznego wyświetlania menu, planowania dostaw i obsługi tras kierowców. Panel administratora korzysta z sesji HTTP-only oraz z tokenu Firebase wydawanego wyłącznie po autoryzacji na serwerze.
 
-First, run the development server:
+## Uruchomienie lokalne
+
+1. Skopiuj `.env.example` jako `.env.local` i ustaw wszystkie wartości.
+2. W Firebase utwórz projekt z Firestore i wygeneruj konto usługi; jego dane wpisz do trzech zmiennych `FIREBASE_ADMIN_*`.
+3. W konsoli Firebase Authentication włącz usługę Authentication. Tokeny niestandardowe nie wymagają żadnego dostawcy logowania.
+4. Wklej reguły z [firestore.rules](firestore.rules) do **Firestore Database → Rules** i opublikuj je.
+5. Zainstaluj zależności i uruchom aplikację:
 
 ```bash
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Adres lokalny: `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Kontrole przed wdrożeniem
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+npm run build
+```
 
-## Learn More
+Oba polecenia muszą zakończyć się powodzeniem. Nie zapisuj `.env.local`, klucza konta usługi ani haseł w repozytorium.
 
-To learn more about Next.js, take a look at the following resources:
+## Wdrożenie Docker
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Obraz jest przygotowany do samodzielnego hostowania:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+docker build -t jak-u-mamy .
+docker run --env-file .env.local -p 3000:3000 jak-u-mamy
+```
 
-## Deploy on Vercel
+Przed wystawieniem aplikacji publicznie ustaw HTTPS w reverse proxy (np. Nginx, Caddy albo panel hostingu). Produkcyjne ciasteczka sesyjne są wtedy oznaczone jako `Secure`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Zmienne środowiskowe
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Zmienna | Zastosowanie |
+| --- | --- |
+| `ADMIN_PASSWORD` | hasło administratora |
+| `ADMIN_SESSION_SECRET` | podpis sesji administratora |
+| `DRIVER_SESSION_SECRET` | podpis sesji kierowców |
+| `FIREBASE_ADMIN_PROJECT_ID` | identyfikator projektu Firebase |
+| `FIREBASE_ADMIN_CLIENT_EMAIL` | e-mail konta usługi Firebase |
+| `FIREBASE_ADMIN_PRIVATE_KEY` | klucz prywatny konta usługi Firebase |
+
+Nie używaj `NEXT_PUBLIC_` dla haseł ani sekretów.

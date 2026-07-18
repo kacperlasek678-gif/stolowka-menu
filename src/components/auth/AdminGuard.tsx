@@ -14,6 +14,9 @@ import {
   LogIn,
   ShieldCheck,
 } from "lucide-react";
+import { signInWithCustomToken, signOut } from "firebase/auth";
+
+import { auth } from "@/lib/firebase";
 
 /* =========================================================
    TYPY
@@ -99,10 +102,29 @@ export default function AdminGuard({
           dane.success &&
           dane.authenticated
         ) {
+          const tokenResponse = await fetch(
+            "/api/admin/firebase-token",
+            {
+              method: "POST",
+              credentials: "include",
+              cache: "no-store",
+            }
+          );
+
+          const tokenData = await tokenResponse.json();
+
+          if (!tokenResponse.ok || typeof tokenData.token !== "string") {
+            throw new Error(tokenData.error || "Nie udało się przygotować dostępu do danych.");
+          }
+
+          await signInWithCustomToken(auth, tokenData.token);
+
           setZalogowany(
             true
           );
         } else {
+          await signOut(auth);
+
           setZalogowany(
             false
           );
@@ -112,6 +134,8 @@ export default function AdminGuard({
           "Błąd sprawdzania sesji administratora:",
           error
         );
+
+        await signOut(auth);
 
         setZalogowany(
           false
@@ -128,7 +152,7 @@ export default function AdminGuard({
   ======================================================= */
 
   useEffect(() => {
-    sprawdzSesje();
+    void Promise.resolve().then(sprawdzSesje);
   }, [sprawdzSesje]);
 
   /* =======================================================
@@ -193,6 +217,25 @@ export default function AdminGuard({
             "Nie udało się zalogować."
         );
       }
+
+      const tokenResponse = await fetch(
+        "/api/admin/firebase-token",
+        {
+          method: "POST",
+          credentials: "include",
+          cache: "no-store",
+        }
+      );
+
+      const tokenData = await tokenResponse.json();
+
+      if (!tokenResponse.ok || typeof tokenData.token !== "string") {
+        throw new Error(
+          tokenData.error || "Nie udało się przygotować dostępu do danych."
+        );
+      }
+
+      await signInWithCustomToken(auth, tokenData.token);
 
       /* ===============================================
          LOGOWANIE UDANE

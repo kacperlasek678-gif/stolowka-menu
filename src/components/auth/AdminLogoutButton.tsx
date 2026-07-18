@@ -8,6 +8,9 @@ import {
 import {
   useState,
 } from "react";
+import { signOut } from "firebase/auth";
+
+import { auth } from "@/lib/firebase";
 
 /* =========================================================
    PRZYCISK WYLOGOWANIA ADMINISTRATORA
@@ -53,6 +56,8 @@ export default function AdminLogoutButton() {
             "Nie udało się wylogować."
         );
       }
+
+      await signOut(auth);
 
       /* ===================================================
          ODŚWIEŻAMY STRONĘ

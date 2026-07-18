@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   collection,
@@ -162,9 +162,9 @@ export default function TrasaPage() {
     return () => unsubscribe();
   }, []);
 
-  function pobierzStatus(
+  const pobierzStatus = useCallback((
     klientId: string
-  ): Status {
+  ): Status => {
     const status = statusy.find(
       (element) =>
         element.klientId === klientId &&
@@ -172,7 +172,7 @@ export default function TrasaPage() {
     );
 
     return status?.status || "oczekuje";
-  }
+  }, [statusy, dzisiejszaData]);
 
   // DOSTAWY WYBRANEGO KIEROWCY
 
@@ -238,10 +238,9 @@ export default function TrasaPage() {
 
   }, [
     klienci,
-    statusy,
     wybranyKierowca,
     dzienTygodnia,
-    dzisiejszaData,
+    pobierzStatus,
   ]);
 
   const pozostalo = dostawy.filter(

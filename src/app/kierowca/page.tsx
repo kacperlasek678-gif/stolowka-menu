@@ -519,7 +519,7 @@ export default function KierowcaPage() {
       }
     }
 
-    sprawdzSesje();
+    void Promise.resolve().then(sprawdzSesje);
   }, []);
 
   /* =======================================================
@@ -527,7 +527,7 @@ export default function KierowcaPage() {
   ======================================================= */
 
   useEffect(() => {
-    pobierzKierowcow();
+    void Promise.resolve().then(pobierzKierowcow);
   }, [
     pobierzKierowcow,
   ]);
@@ -537,21 +537,21 @@ export default function KierowcaPage() {
   ======================================================= */
 
   useEffect(() => {
-    if (
-      !zalogowanyKierowca
-    ) {
-      setTrasa(
-        null
-      );
+    const kierowcaId =
+      zalogowanyKierowca?.id;
 
-      setDostawy(
-        []
-      );
+    if (
+      !kierowcaId
+    ) {
+      void Promise.resolve().then(() => {
+        setTrasa(null);
+        setDostawy([]);
+      });
 
       return;
     }
 
-    pobierzTrase();
+    void Promise.resolve().then(pobierzTrase);
   }, [
     zalogowanyKierowca?.id,
     pobierzTrase,

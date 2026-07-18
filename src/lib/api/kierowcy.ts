@@ -1,4 +1,5 @@
 import { apiFetch } from "./fetcher";
+import type { Kierowca } from "@/types/kierowca";
 
 export interface DriverPayload {
   imie: string;
@@ -6,17 +7,26 @@ export interface DriverPayload {
   aktywny: boolean;
 }
 
-export async function getDrivers() {
+export async function getDrivers(): Promise<{
+  success: true;
+  kierowcy: Kierowca[];
+}> {
   return apiFetch<{
-    success: boolean;
-    kierowcy: any[];
+    success: true;
+    kierowcy: Kierowca[];
   }>("/api/admin/kierowcy");
 }
 
 export async function createDriver(
   data: DriverPayload
-) {
-  return apiFetch(
+): Promise<{
+  success: true;
+  kierowca: Kierowca;
+}> {
+  return apiFetch<{
+    success: true;
+    kierowca: Kierowca;
+  }>(
     "/api/admin/kierowcy",
     {
       method: "POST",
@@ -28,8 +38,14 @@ export async function createDriver(
 export async function updateDriver(
   id: string,
   data: DriverPayload
-) {
-  return apiFetch(
+): Promise<{
+  success: true;
+  kierowca: Kierowca;
+}> {
+  return apiFetch<{
+    success: true;
+    kierowca: Kierowca;
+  }>(
     "/api/admin/kierowcy",
     {
       method: "PATCH",
@@ -43,8 +59,14 @@ export async function updateDriver(
 
 export async function deleteDriver(
   id: string
-) {
-  return apiFetch(
+): Promise<{
+  success: true;
+  message: string;
+}> {
+  return apiFetch<{
+    success: true;
+    message: string;
+  }>(
     "/api/admin/kierowcy",
     {
       method: "DELETE",

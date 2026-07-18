@@ -6,31 +6,33 @@ const collection = adminDb.collection("kierowcy");
 /* =========================================================
    POBIERZ WSZYSTKICH KIEROWCÓW
 ========================================================= */
+function mapDriver(
+  doc: FirebaseFirestore.QueryDocumentSnapshot
+): Kierowca {
+  const data = doc.data();
+
+  const {
+    pin,
+    pinHash,
+    ...rest
+  } = data;
+
+  return {
+    id: doc.id,
+    ...rest,
+
+    pinUstawiony: Boolean(
+      data.pinUstawiony ||
+      pinHash ||
+      pin
+    ),
+  } as Kierowca;
+}
 
 export async function getAllDrivers(): Promise<Kierowca[]> {
   const snapshot = await collection.get();
 
-  const kierowcy = snapshot.docs.map((doc) => {
-    const data = doc.data();
-
-    const {
-      pin,
-      pinHash,
-      ...rest
-    } = data;
-
-    return {
-      id: doc.id,
-
-      ...rest,
-
-      pinUstawiony: Boolean(
-        data.pinUstawiony ||
-        pinHash ||
-        pin
-      ),
-    };
-  }) as Kierowca[];
+ const kierowcy = snapshot.docs.map(mapDriver);
 
   kierowcy.sort((a, b) =>
     a.imie.localeCompare(
@@ -46,36 +48,6 @@ export async function getAllDrivers(): Promise<Kierowca[]> {
    POBIERZ JEDNEGO KIEROWCĘ
 ========================================================= */
 
-export async function getDriverById(
-  id: string
-) {
-  const snapshot =
-    await collection.doc(id).get();
-
-  if (!snapshot.exists) {
-    return null;
-  }
-
-  const data = snapshot.data()!;
-
-  const {
-    pin,
-    pinHash,
-    ...rest
-  } = data;
-
-  return {
-    id,
-
-    ...rest,
-
-    pinUstawiony: Boolean(
-      data.pinUstawiony ||
-      pinHash ||
-      pin
-    ),
-  };
-}
 
 /* =========================================================
    DODAJ KIEROWCĘ
@@ -153,4 +125,50 @@ export async function setDriverPinFlag(
   await collection.doc(id).update({
     pinUstawiony: status,
   });
+}
+
+export async function setDriverPinHash(
+  id: string,
+  pinHash: string
+) {
+  await collection.doc(id).update({
+    pinHash,
+    pinUstawiony: true,
+    pinZmieniono: new Date(),
+  });
+}
+
+export async function getDriverById(
+  id: string
+): Promise<Kierowca | null> {
+  const doc = await collection.doc(id).get();
+
+  if (!doc.exists) {
+    return null;
+  }
+
+  return mapDriver(
+    doc as FirebaseFirestore.QueryDocumentSnapshot
+  );
+}
+
+export async function driverLoginExists(
+  login: string,
+  excludeId?: string
+): Promise<boolean> {
+  const snapshot = await collection
+    .where("login", "==", login)
+    .get();
+
+  if (snapshot.empty) {
+    return false;
+  }
+
+  if (!excludeId) {
+    return true;
+  }
+
+  return snapshot.docs.some(
+    (doc) => doc.id !== excludeId
+  );
 }

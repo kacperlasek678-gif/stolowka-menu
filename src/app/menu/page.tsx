@@ -14,10 +14,18 @@ import {
 
 import { db } from "@/lib/firebase";
 
+type MenuItem = {
+  id: string;
+  name: string;
+  price: number;
+  category: string;
+  available: boolean;
+};
+
 export default function MenuPage() {
 
   const [items, setItems] =
-    useState<any[]>([]);
+    useState<MenuItem[]>([]);
 
   const [time, setTime] =
     useState("");
@@ -34,7 +42,7 @@ export default function MenuPage() {
               id: doc.id,
               ...doc.data(),
             })
-          );
+          ) as MenuItem[];
 
         setItems(data);
 
@@ -185,7 +193,7 @@ export default function MenuPage() {
 
           const filtered =
             items.filter(
-              (item: any) =>
+              (item) =>
                 item.category ===
                 category
             );
@@ -216,7 +224,7 @@ export default function MenuPage() {
               <div className="grid grid-cols-1 gap-3">
 
                 {filtered.map(
-                  (item: any) => (
+                  (item) => (
 
                     <div
                       key={item.id}

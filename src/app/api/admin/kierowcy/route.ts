@@ -1,653 +1,149 @@
+import { NextRequest } from "next/server";
+
+import { requireAdmin } from "@/lib/admin-auth";
 import {
-  NextRequest,
-  NextResponse,
-} from "next/server";
-
+  createDriver,
+  deleteDriver,
+  driverExists,
+  getAllDrivers,
+  getDriverById,
+  updateDriver,
+} from "@/lib/services/kierowcy.service";
 import {
-  requireAdmin,
-} from "@/lib/admin-auth";
+  badRequest,
+  created,
+  notFound,
+  ok,
+  serverError,
+  unauthorized,
+} from "@/lib/utils/api-response";
+import { validateDriver } from "@/lib/validators/kierowca";
 
-import {
-  adminDb,
-} from "@/lib/firebase-admin";
+export const runtime = "nodejs";
 
-export const runtime =
-  "nodejs";
+type DriverInput = {
+  imie: string;
+  telefon: string;
+  aktywny: boolean;
+};
 
-/* =========================================================
-   FUNKCJA POMOCNICZA
-   SPRAWDZENIE ADMINISTRATORA
-========================================================= */
+function readDriverInput(body: unknown): DriverInput {
+  if (typeof body !== "object" || body === null) {
+    throw new Error("Nieprawidłowe dane kierowcy.");
+  }
 
-async function sprawdzAdmina(
-  request: NextRequest
-) {
-  const admin =
-    await requireAdmin(
-      request
-    );
+  const data = body as Record<string, unknown>;
 
-  return admin;
+  return {
+    imie: validateDriver(typeof data.imie === "string" ? data.imie : ""),
+    telefon: typeof data.telefon === "string" ? data.telefon.trim() : "",
+    aktywny: typeof data.aktywny === "boolean" ? data.aktywny : true,
+  };
 }
 
-/* =========================================================
-   GET /api/admin/kierowcy
+async function isAdmin(request: NextRequest) {
+  return Boolean(await requireAdmin(request));
+}
 
-   Pobieranie listy kierowców.
-========================================================= */
+function handleError(error: unknown, message: string) {
+  console.error(message, error);
 
-export async function GET(
-  request: NextRequest
-) {
+  if (error instanceof Error && error.message.startsWith("Podaj")) {
+    return badRequest(error.message);
+  }
+
+  return serverError(message);
+}
+
+export async function GET(request: NextRequest) {
   try {
-    /* =====================================================
-       AUTORYZACJA
-    ===================================================== */
-
-    const admin =
-      await sprawdzAdmina(
-        request
-      );
-
-    if (!admin) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Brak autoryzacji.",
-        },
-        {
-          status: 401,
-        }
-      );
+    if (!(await isAdmin(request))) {
+      return unauthorized();
     }
 
-    /* =====================================================
-       POBRANIE KIEROWCÓW
-    ===================================================== */
-
-    const snapshot =
-      await adminDb
-        .collection(
-          "kierowcy"
-        )
-        .get();
-
-    /* =====================================================
-       MAPOWANIE DANYCH
-
-       Nie zwracamy:
-       - pin
-       - pinHash
-
-       Do przeglądarki trafia tylko informacja,
-       czy PIN został ustawiony.
-    ===================================================== */
-
-    const kierowcy =
-      snapshot.docs.map(
-        (document) => {
-          const dane =
-            document.data();
-
-          const {
-            pin,
-            pinHash,
-            ...bezpieczneDane
-          } = dane;
-
-          return {
-            id:
-              document.id,
-
-            ...bezpieczneDane,
-
-            pinUstawiony:
-              Boolean(
-                dane.pinUstawiony ||
-                  pinHash ||
-                  pin
-              ),
-          };
-        }
-      );
-
-    /* =====================================================
-       SORTOWANIE PO IMIENIU
-    ===================================================== */
-
-    kierowcy.sort(
-      (a, b) => {
-        const imieA =
-          typeof a.imie ===
-          "string"
-            ? a.imie
-            : "";
-
-        const imieB =
-          typeof b.imie ===
-          "string"
-            ? b.imie
-            : "";
-
-        return imieA.localeCompare(
-          imieB,
-          "pl"
-        );
-      }
-    );
-
-    /* =====================================================
-       ODPOWIEDŹ
-    ===================================================== */
-
-    return NextResponse.json(
-      {
-        success: true,
-        kierowcy,
-      },
-      {
-        status: 200,
-
-        headers: {
-          "Cache-Control":
-            "no-store, max-age=0",
-        },
-      }
-    );
-
+    const kierowcy = await getAllDrivers();
+    const response = ok({ kierowcy });
+    response.headers.set("Cache-Control", "no-store, max-age=0");
+    return response;
   } catch (error) {
-    console.error(
-      "Błąd pobierania kierowców:",
-      error
-    );
-
-    return NextResponse.json(
-      {
-        success: false,
-        error:
-          "Nie udało się pobrać kierowców.",
-      },
-      {
-        status: 500,
-      }
-    );
+    return handleError(error, "Nie udało się pobrać kierowców.");
   }
 }
 
-/* =========================================================
-   POST /api/admin/kierowcy
-
-   Dodawanie nowego kierowcy.
-
-   PIN będzie ustawiany osobnym bezpiecznym endpointem.
-========================================================= */
-
-export async function POST(
-  request: NextRequest
-) {
+export async function POST(request: NextRequest) {
   try {
-    /* =====================================================
-       AUTORYZACJA
-    ===================================================== */
-
-    const admin =
-      await sprawdzAdmina(
-        request
-      );
-
-    if (!admin) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Brak autoryzacji.",
-        },
-        {
-          status: 401,
-        }
-      );
+    if (!(await isAdmin(request))) {
+      return unauthorized();
     }
 
-    /* =====================================================
-       BODY
-    ===================================================== */
+    const input = readDriverInput(await request.json());
+    const id = await createDriver(input);
 
-    const body =
-      await request.json();
-
-    const imie =
-      typeof body.imie ===
-      "string"
-        ? body.imie.trim()
-        : "";
-
-    const telefon =
-      typeof body.telefon ===
-      "string"
-        ? body.telefon.trim()
-        : "";
-
-    const aktywny =
-      typeof body.aktywny ===
-      "boolean"
-        ? body.aktywny
-        : true;
-
-    /* =====================================================
-       WALIDACJA
-    ===================================================== */
-
-    if (!imie) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Podaj imię kierowcy.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    /* =====================================================
-       UTWORZENIE KIEROWCY
-    ===================================================== */
-
-    const dokument =
-      await adminDb
-        .collection(
-          "kierowcy"
-        )
-        .add({
-          imie,
-          telefon,
-          aktywny,
-
-          pinUstawiony:
-            false,
-
-          utworzono:
-            new Date(),
-        });
-
-    /* =====================================================
-       ODPOWIEDŹ
-    ===================================================== */
-
-    return NextResponse.json(
-      {
-        success: true,
-
-        kierowca: {
-          id:
-            dokument.id,
-
-          imie,
-          telefon,
-          aktywny,
-
-          pinUstawiony:
-            false,
-        },
+    return created({
+      kierowca: {
+        id,
+        ...input,
+        pinUstawiony: false,
       },
-      {
-        status: 201,
-      }
-    );
-
-  } catch (error) {
-    console.error(
-      "Błąd dodawania kierowcy:",
-      error
-    );
-
-    return NextResponse.json(
-      {
-        success: false,
-        error:
-          "Nie udało się dodać kierowcy.",
-      },
-      {
-        status: 500,
-      }
-    );
-  }
-}
-
-/* =========================================================
-   PATCH /api/admin/kierowcy
-
-   Edycja istniejącego kierowcy.
-
-   Body:
-   {
-     id: "...",
-     imie: "...",
-     telefon: "...",
-     aktywny: true
-   }
-========================================================= */
-
-export async function PATCH(
-  request: NextRequest
-) {
-  try {
-    /* =====================================================
-       AUTORYZACJA
-    ===================================================== */
-
-    const admin =
-      await sprawdzAdmina(
-        request
-      );
-
-    if (!admin) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Brak autoryzacji.",
-        },
-        {
-          status: 401,
-        }
-      );
-    }
-
-    /* =====================================================
-       BODY
-    ===================================================== */
-
-    const body =
-      await request.json();
-
-    const id =
-      typeof body.id ===
-      "string"
-        ? body.id.trim()
-        : "";
-
-    const imie =
-      typeof body.imie ===
-      "string"
-        ? body.imie.trim()
-        : "";
-
-    const telefon =
-      typeof body.telefon ===
-      "string"
-        ? body.telefon.trim()
-        : "";
-
-    const aktywny =
-      typeof body.aktywny ===
-      "boolean"
-        ? body.aktywny
-        : true;
-
-    /* =====================================================
-       WALIDACJA ID
-    ===================================================== */
-
-    if (!id) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Brakuje identyfikatora kierowcy.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    /* =====================================================
-       WALIDACJA IMIENIA
-    ===================================================== */
-
-    if (!imie) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Podaj imię kierowcy.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    /* =====================================================
-       REFERENCJA DO KIEROWCY
-    ===================================================== */
-
-    const kierowcaRef =
-      adminDb
-        .collection(
-          "kierowcy"
-        )
-        .doc(
-          id
-        );
-
-    /* =====================================================
-       SPRAWDZENIE CZY ISTNIEJE
-    ===================================================== */
-
-    const snapshot =
-      await kierowcaRef.get();
-
-    if (
-      !snapshot.exists
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Kierowca nie istnieje.",
-        },
-        {
-          status: 404,
-        }
-      );
-    }
-
-    /* =====================================================
-       AKTUALIZACJA
-
-       Nie dotykamy:
-       - pin
-       - pinHash
-       - pinUstawiony
-    ===================================================== */
-
-    await kierowcaRef.update({
-      imie,
-      telefon,
-      aktywny,
     });
-
-    /* =====================================================
-       ODPOWIEDŹ
-    ===================================================== */
-
-    return NextResponse.json(
-      {
-        success: true,
-
-        kierowca: {
-          id,
-          imie,
-          telefon,
-          aktywny,
-        },
-      },
-      {
-        status: 200,
-      }
-    );
-
   } catch (error) {
-    console.error(
-      "Błąd aktualizacji kierowcy:",
-      error
-    );
-
-    return NextResponse.json(
-      {
-        success: false,
-        error:
-          "Nie udało się zaktualizować kierowcy.",
-      },
-      {
-        status: 500,
-      }
-    );
+    return handleError(error, "Nie udało się dodać kierowcy.");
   }
 }
 
-/* =========================================================
-   DELETE /api/admin/kierowcy
-
-   Usuwanie kierowcy.
-
-   Body:
-   {
-     id: "..."
-   }
-========================================================= */
-
-export async function DELETE(
-  request: NextRequest
-) {
+export async function PATCH(request: NextRequest) {
   try {
-    /* =====================================================
-       AUTORYZACJA
-    ===================================================== */
-
-    const admin =
-      await sprawdzAdmina(
-        request
-      );
-
-    if (!admin) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Brak autoryzacji.",
-        },
-        {
-          status: 401,
-        }
-      );
+    if (!(await isAdmin(request))) {
+      return unauthorized();
     }
 
-    /* =====================================================
-       BODY
-    ===================================================== */
-
-    const body =
-      await request.json();
-
+    const body = await request.json();
     const id =
-      typeof body.id ===
-      "string"
+      typeof body === "object" && body !== null && typeof body.id === "string"
         ? body.id.trim()
         : "";
 
-    /* =====================================================
-       WALIDACJA
-    ===================================================== */
+    if (!id) {
+      return badRequest("Brakuje identyfikatora kierowcy.");
+    }
+
+    if (!(await driverExists(id))) {
+      return notFound("Kierowca nie istnieje.");
+    }
+
+    const input = readDriverInput(body);
+    await updateDriver(id, input);
+    const kierowca = await getDriverById(id);
+
+    return ok({ kierowca });
+  } catch (error) {
+    return handleError(error, "Nie udało się zaktualizować kierowcy.");
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    if (!(await isAdmin(request))) {
+      return unauthorized();
+    }
+
+    const body = await request.json();
+    const id =
+      typeof body === "object" && body !== null && typeof body.id === "string"
+        ? body.id.trim()
+        : "";
 
     if (!id) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Brakuje identyfikatora kierowcy.",
-        },
-        {
-          status: 400,
-        }
-      );
+      return badRequest("Brakuje identyfikatora kierowcy.");
     }
 
-    /* =====================================================
-       REFERENCJA
-    ===================================================== */
-
-    const kierowcaRef =
-      adminDb
-        .collection(
-          "kierowcy"
-        )
-        .doc(
-          id
-        );
-
-    /* =====================================================
-       SPRAWDZENIE CZY KIEROWCA ISTNIEJE
-    ===================================================== */
-
-    const snapshot =
-      await kierowcaRef.get();
-
-    if (
-      !snapshot.exists
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Kierowca nie istnieje.",
-        },
-        {
-          status: 404,
-        }
-      );
+    if (!(await driverExists(id))) {
+      return notFound("Kierowca nie istnieje.");
     }
 
-    /* =====================================================
-       USUNIĘCIE
-    ===================================================== */
-
-    await kierowcaRef.delete();
-
-    /* =====================================================
-       ODPOWIEDŹ
-    ===================================================== */
-
-    return NextResponse.json(
-      {
-        success: true,
-        message:
-          "Kierowca został usunięty.",
-      },
-      {
-        status: 200,
-      }
-    );
-
+    await deleteDriver(id);
+    return ok({ message: "Kierowca został usunięty." });
   } catch (error) {
-    console.error(
-      "Błąd usuwania kierowcy:",
-      error
-    );
-
-    return NextResponse.json(
-      {
-        success: false,
-        error:
-          "Nie udało się usunąć kierowcy.",
-      },
-      {
-        status: 500,
-      }
-    );
+    return handleError(error, "Nie udało się usunąć kierowcy.");
   }
 }

@@ -1,244 +1,58 @@
-import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { NextRequest } from "next/server";
+
+import { requireAdmin } from "@/lib/admin-auth";
+import {
+  driverExists,
+  setDriverPinHash,
+} from "@/lib/services/kierowcy.service";
+import {
+  badRequest,
+  notFound,
+  ok,
+  serverError,
+  unauthorized,
+} from "@/lib/utils/api-response";
+import { validatePin } from "@/lib/validators/kierowca";
 
 export const runtime = "nodejs";
 
-export async function POST(
-  request: NextRequest
-) {
+export async function POST(request: NextRequest) {
   try {
-    console.log(
-      "=== TEST API PIN START ==="
-    );
+    if (!(await requireAdmin(request))) {
+      return unauthorized();
+    }
 
-    const body =
-      await request.json();
-
-    console.log(
-      "Otrzymano body:",
-      {
-        kierowcaId:
-          body.kierowcaId,
-        pinOtrzymany:
-          Boolean(body.pin),
-      }
-    );
-
-    /* =========================================
-       SPRAWDZENIE ENV
-    ========================================= */
-
-    console.log(
-      "FIREBASE_ADMIN_PROJECT_ID:",
-      process.env
-        .FIREBASE_ADMIN_PROJECT_ID
-        ? "OK"
-        : "BRAK"
-    );
-
-    console.log(
-      "FIREBASE_ADMIN_CLIENT_EMAIL:",
-      process.env
-        .FIREBASE_ADMIN_CLIENT_EMAIL
-        ? "OK"
-        : "BRAK"
-    );
-
-    console.log(
-      "FIREBASE_ADMIN_PRIVATE_KEY:",
-      process.env
-        .FIREBASE_ADMIN_PRIVATE_KEY
-        ? "OK"
-        : "BRAK"
-    );
-
+    const body = await request.json();
     const kierowcaId =
-      typeof body.kierowcaId ===
-      "string"
+      typeof body === "object" && body !== null && typeof body.kierowcaId === "string"
         ? body.kierowcaId.trim()
         : "";
 
-    const pin =
-      typeof body.pin ===
-      "string"
-        ? body.pin.trim()
-        : "";
-
-    /* =========================================
-       WALIDACJA
-    ========================================= */
-
     if (!kierowcaId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Brak ID kierowcy.",
-        },
-        {
-          status: 400,
-        }
-      );
+      return badRequest("Brak ID kierowcy.");
     }
 
-    if (
-      !/^\d{4}$/.test(pin)
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "PIN musi mieć dokładnie 4 cyfry.",
-        },
-        {
-          status: 400,
-        }
-      );
+    const pin = validatePin(
+      typeof body === "object" && body !== null && typeof body.pin === "string"
+        ? body.pin.trim()
+        : ""
+    );
+
+    if (!(await driverExists(kierowcaId))) {
+      return notFound("Nie znaleziono kierowcy.");
     }
 
-    /* =========================================
-       DYNAMICZNY IMPORT FIREBASE ADMIN
+    const pinHash = await bcrypt.hash(pin, 12);
+    await setDriverPinHash(kierowcaId, pinHash);
 
-       Dzięki temu, jeżeli problem jest
-       z konfiguracją Firebase Admin,
-       zobaczymy dokładny błąd.
-    ========================================= */
-
-    console.log(
-      "Próba importu Firebase Admin..."
-    );
-
-    const {
-      adminDb,
-    } = await import(
-      "@/lib/firebase-admin"
-    );
-
-    console.log(
-      "Firebase Admin załadowany."
-    );
-
-    /* =========================================
-       POBRANIE KIEROWCY
-    ========================================= */
-
-    console.log(
-      "Szukam kierowcy:",
-      kierowcaId
-    );
-
-    const kierowcaRef =
-      adminDb
-        .collection(
-          "kierowcy"
-        )
-        .doc(
-          kierowcaId
-        );
-
-    const kierowcaSnapshot =
-      await kierowcaRef.get();
-
-    if (
-      !kierowcaSnapshot.exists
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Nie znaleziono kierowcy.",
-        },
-        {
-          status: 404,
-        }
-      );
-    }
-
-    console.log(
-      "Kierowca znaleziony."
-    );
-
-    /* =========================================
-       HASHOWANIE
-    ========================================= */
-
-    console.log(
-      "Hashowanie PIN-u..."
-    );
-
-    const pinHash =
-      await bcrypt.hash(
-        pin,
-        12
-      );
-
-    console.log(
-      "PIN zahashowany."
-    );
-
-    /* =========================================
-       ZAPIS
-    ========================================= */
-
-    await kierowcaRef.update({
-      pinHash,
-      pinUstawiony:
-        true,
-      pinZmieniono:
-        new Date(),
-    });
-
-    console.log(
-      "PIN zapisany w Firestore."
-    );
-
-    console.log(
-      "=== TEST API PIN KONIEC ==="
-    );
-
-    return NextResponse.json({
-      success: true,
-      message:
-        "PIN został zapisany.",
-    });
+    return ok({ message: "PIN został zapisany." });
   } catch (error) {
-    console.error(
-      "================================"
-    );
+    if (error instanceof Error && error.message.startsWith("PIN musi")) {
+      return badRequest(error.message);
+    }
 
-    console.error(
-      "BŁĄD API PIN:"
-    );
-
-    console.error(
-      error
-    );
-
-    console.error(
-      "================================"
-    );
-
-    const message =
-      error instanceof Error
-        ? error.message
-        : String(error);
-
-    /*
-     * Teraz nawet w przypadku błędu
-     * próbujemy zwrócić JSON.
-     */
-
-    return NextResponse.json(
-      {
-        success: false,
-        error:
-          "Błąd serwera podczas zapisywania PIN-u.",
-        details:
-          message,
-      },
-      {
-        status: 500,
-      }
-    );
+    console.error("Błąd zapisywania PIN-u kierowcy:", error);
+    return serverError("Nie udało się zapisać PIN-u.");
   }
 }
