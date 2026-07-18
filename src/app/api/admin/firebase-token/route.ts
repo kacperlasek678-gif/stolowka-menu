@@ -2,7 +2,7 @@ import { getAuth } from "firebase-admin/auth";
 import { NextRequest } from "next/server";
 
 import { requireAdmin } from "@/lib/admin-auth";
-import "@/lib/firebase-admin";
+import { getFirebaseAdminApp } from "@/lib/firebase-admin";
 import { serverError, unauthorized } from "@/lib/utils/api-response";
 
 export const runtime = "nodejs";
@@ -13,7 +13,9 @@ export async function POST(request: NextRequest) {
       return unauthorized();
     }
 
-    const token = await getAuth().createCustomToken("jak-u-mamy-admin", {
+    const token = await getAuth(
+      getFirebaseAdminApp()
+    ).createCustomToken("jak-u-mamy-admin", {
       role: "admin",
     });
 
