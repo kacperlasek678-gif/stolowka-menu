@@ -1,8 +1,6 @@
-import { getAuth } from "firebase-admin/auth";
 import { NextRequest } from "next/server";
 
 import { requireAdmin } from "@/lib/admin-auth";
-import { getFirebaseAdminApp } from "@/lib/firebase-admin";
 import { serverError, unauthorized } from "@/lib/utils/api-response";
 
 export const runtime = "nodejs";
@@ -12,6 +10,16 @@ export async function POST(request: NextRequest) {
     if (!(await requireAdmin(request))) {
       return unauthorized();
     }
+
+    // Firebase Admin is loaded only after verifying the admin session. This
+    // keeps an invalid credential from crashing the whole endpoint module.
+    const [
+      { getAuth },
+      { getFirebaseAdminApp },
+    ] = await Promise.all([
+      import("firebase-admin/auth"),
+      import("@/lib/firebase-admin"),
+    ]);
 
     const token = await getAuth(
       getFirebaseAdminApp()
